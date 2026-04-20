@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Lagenstaffel Optimierer</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background: #f5f5f5; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 5px; }
+    input { width: 60px; }
+    .button { margin-top: 10px; padding: 5px 10px; }
+    .result { background: white; padding: 10px; margin-top: 20px; }
+    h2 { margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h1>Lagenstaffel Optimierer</h1>
+  <p>Trage bis zu 8 Schwimmer*innen mit Zeiten ein. Leere Felder werden ignoriert. Zeitformat: <code>ss,00</code></p>
+
+  <h2>Schwimmer*innen</h2>
+  <table id="swimmers">
+    <tr><th>Name</th><th>Rücken</th><th>Brust</th><th>Delfin</th><th>Kraul</th></tr>
+    <script>
+      for (let i = 0; i < 8; i++) {
+        document.write(`<tr>
+          <td><input id="sname${i}"></td>
+          <td><input id="stime${i}r"></td>
+          <td><input id="stime${i}b"></td>
+          <td><input id="stime${i}d"></td>
+          <td><input id="stime${i}k"></td>
+        </tr>`);
+      }
+    </script>
+  </table>
+
+  <button class="button" onclick="calculate()">Top 5 Kombinationen berechnen</button>
+
+  <div id="output" class="result"></div>
+
+  <script>
+    function parseTime(val) {
+      if (!val || val.trim() === "") return null;
+      val = val.replace(",", ".");
+      let f = parseFloat(val);
+      return isNaN(f) ? null : f;
+    }
+
+    function getSwimmers() {
+      let list = [];
+      for (let i = 0; i < 8; i++) {
+        let name = document.getElementById('sname' + i).value;
+        if (!name) continue;
+        let r = parseTime(document.getElementById('stime' + i + 'r').value);
+        let b = parseTime(document.getElementById('stime' + i + 'b').value);
+        let d = parseTime(document.getElementById('stime' + i + 'd').value);
+        let k = parseTime(document.getElementById('stime' + i + 'k').value);
+        list.push({ name, times: [r, b, d, k] });
+      }
+      return list;
+    }
+
+    function calculate() {
+      const swimmers = getSwimmers();
+      let results = [];
+
+      function choose4(arr) {
+        let out = [];
+        for (let i = 0; i < arr.length; i++) {
+          for (let j = i + 1; j < arr.length; j++) {
+            for (let k = j + 1; k < arr.length; k++) {
+              for (let l = k + 1; l < arr.length; l++) {
+                out.push([arr[i], arr[j], arr[k], arr[l]]);
+              }
+            }
+          }
+        }
+        return out;
+      }
+
+      function permute(arr) {
+        if (arr.length !== 4) return [];
+        const perms = [];
+        function p(a, n = 0) {
+          if (n === a.length) perms.push(a.slice());
+          for (let i = n; i < a.length; i++) {
+            [a[i], a[n]] = [a[n], a[i]];
+            p(a, n + 1);
+            [a[i], a[n]] = [a[n], a[i]];
+          }
+        }
+        p(arr);
+        return perms;
+      }
+
+      for (let team of choose4(swimmers)) {
+        for (let order of permute(team)) {
+          let total = 0;
+          let valid = true;
+          for (let i = 0; i < 4; i++) {
+            let t = order[i].times[i];
+            if (t == null) {
+              valid = false;
+              break;
+            }
+            total += t;
+          }
+          if (valid) {
+            results.push({ order, total });
+          }
+        }
+      }
+
+      results.sort((a, b) => a.total - b.total);
+      const best = results.slice(0, 5);
+
+      let html = "<h2>Top Kombinationen</h2><ol>";
+      for (let res of best) {
+        html += `<li><b>${res.total.toFixed(2)} s</b>: `;
+        html += `${res.order[0].name} (Rücken), ${res.order[1].name} (Brust), ${res.order[2].name} (Delfin), ${res.order[3].name} (Kraul)`;
+        html += `</li>`;
+      }
+      html += "</ol>";
+      document.getElementById("output").innerHTML = html;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Mixed-Lagenstaffel Optimierer</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background: #f5f5f5; }
+    table, th, td { border: 1px solid #ccc; border-collapse: collapse; padding: 5px; }
+    input { width: 60px; }
+    .button { margin-top: 10px; padding: 5px 10px; }
+    .result { background: white; padding: 10px; margin-top: 20px; }
+    h2 { margin-top: 30px; }
+  </style>
+</head>
+<body>
+  <h1>Mixed-Lagenstaffel Optimierer</h1>
+  <p>Trage bis zu 6 Männer und 6 Frauen mit Zeiten ein. Leere Felder werden ignoriert. Zeitformat: <code>ss,00</code></p>
+
+  <h2>männlich</h2>
+  <table id="boys">
+    <tr><th>Name</th><th>Rücken</th><th>Brust</th><th>Delfin</th><th>Kraul</th></tr>
+    <script>
+      for (let i = 0; i < 6; i++) {
+        document.write(`<tr>
+          <td><input id="bname${i}"></td>
+          <td><input id="btime${i}r"></td>
+          <td><input id="btime${i}b"></td>
+          <td><input id="btime${i}d"></td>
+          <td><input id="btime${i}k"></td>
+        </tr>`);
+      }
+    </script>
+  </table>
+
+  <h2>weiblich</h2>
+  <table id="girls">
+    <tr><th>Name</th><th>Rücken</th><th>Brust</th><th>Delfin</th><th>Kraul</th></tr>
+    <script>
+      for (let i = 0; i < 6; i++) {
+        document.write(`<tr>
+          <td><input id="gname${i}"></td>
+          <td><input id="gtime${i}r"></td>
+          <td><input id="gtime${i}b"></td>
+          <td><input id="gtime${i}d"></td>
+          <td><input id="gtime${i}k"></td>
+        </tr>`);
+      }
+    </script>
+  </table>
+
+  <button class="button" onclick="calculate()">Top 5 Kombinationen berechnen</button>
+
+  <div id="output" class="result"></div>
+
+  <script>
+    function parseTime(val) {
+      if (!val || val.trim() === "") return null;
+      val = val.replace(",", ".");
+      let f = parseFloat(val);
+      return isNaN(f) ? null : f;
+    }
+
+    function getSwimmers(prefix) {
+      let list = [];
+      for (let i = 0; i < 6; i++) {
+        let name = document.getElementById(prefix + 'name' + i).value;
+        if (!name) continue;
+        let r = parseTime(document.getElementById(prefix + 'time' + i + 'r').value);
+        let b = parseTime(document.getElementById(prefix + 'time' + i + 'b').value);
+        let d = parseTime(document.getElementById(prefix + 'time' + i + 'd').value);
+        let k = parseTime(document.getElementById(prefix + 'time' + i + 'k').value);
+        list.push({ name, times: [r, b, d, k] });
+      }
+      return list;
+    }
+
+    function calculate() {
+      const boys = getSwimmers('b');
+      const girls = getSwimmers('g');
+      const swimmers = [...boys, ...girls];
+
+      let results = [];
+
+      function permute(arr) {
+        if (arr.length !== 4) return [];
+        const perms = [];
+        function p(a, n = 0) {
+          if (n === a.length) perms.push(a.slice());
+          for (let i = n; i < a.length; i++) {
+            [a[i], a[n]] = [a[n], a[i]];
+            p(a, n + 1);
+            [a[i], a[n]] = [a[n], a[i]];
+          }
+        }
+        p(arr);
+        return perms;
+      }
+
+      function choose2(arr) {
+        let out = [];
+        for (let i = 0; i < arr.length; i++) {
+          for (let j = i + 1; j < arr.length; j++) {
+            out.push([arr[i], arr[j]]);
+          }
+        }
+        return out;
+      }
+
+      for (let b of choose2(boys)) {
+        for (let g of choose2(girls)) {
+          let combo = [...b, ...g];
+          for (let order of permute(combo)) {
+            let total = 0;
+            let valid = true;
+            for (let i = 0; i < 4; i++) {
+              let t = order[i].times[i];
+              if (t == null) {
+                valid = false;
+                break;
+              }
+              total += t;
+            }
+            if (valid) {
+              results.push({ order, total });
+            }
+          }
+        }
+      }
+
+      results.sort((a, b) => a.total - b.total);
+      const best = results.slice(0, 5);
+
+      let html = "<h2>Top Kombinationen</h2><ol>";
+      for (let res of best) {
+        html += `<li><b>${res.total.toFixed(2)} s</b>: `;
+        html += `${res.order[0].name} (Rücken), ${res.order[1].name} (Brust), ${res.order[2].name} (Delfin), ${res.order[3].name} (Kraul)`;
+        html += `</li>`;
+      }
+      html += "</ol>";
+      document.getElementById("output").innerHTML = html;
+    }
+  </script>
+</body>
+</html>
